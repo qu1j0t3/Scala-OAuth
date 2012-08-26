@@ -11,7 +11,7 @@ import org.apache.http.util.EntityUtils
 
 import jm.oauth.MessageSigner
 import jm.oauth.messagesigner._
-import jm.oauth.URLEncoder
+import jm.oauth.URLEncoder.encode
 
 /**
  * Class for making signed requests after an access token has been received
@@ -60,12 +60,12 @@ class Requester(val signatureMethod: String, val consumerSecret: String, val con
     //what if user needs to specify the realm?
     val realm = request.getURI().getScheme() + "://" + request.getURI().getHost() + "/"
     val authHeader = "OAuth realm=\"" + realm + "\"," +
-    	"oauth_consumer_key=\"" + URLEncoder.encode(this.consumerKey) + "\"," +
+    	"oauth_consumer_key=\"" + encode(this.consumerKey) + "\"," +
     	"oauth_nonce=\"" + nonce + "\"," + 
     	"oauth_signature_method=\"" + this.signatureMethod + "\"," +
-    	"oauth_token=\"" + URLEncoder.encode(this.oauthToken) + "\"," +
+    	"oauth_token=\"" + encode(this.oauthToken) + "\"," +
     	"oauth_timestamp=\"" + epoch + "\"," +
-        "oauth_signature=\"" + URLEncoder.encode(signature) + "\"," +
+        "oauth_signature=\"" + encode(signature) + "\"," +
         "oauth_version=\"" + this.version + "\""
         
     request.addHeader("Authorization", authHeader)
@@ -81,9 +81,7 @@ class Requester(val signatureMethod: String, val consumerSecret: String, val con
     val response = client.execute(request)
     //Return a byte array because this could be anything.
     //It's likely a string, but it's really easy to convert byte arrays to strings
-    val responseBody = EntityUtils.toByteArray(response.getEntity())
-
-    return responseBody
+    EntityUtils.toByteArray(response.getEntity())
   }
   
   /**
@@ -93,6 +91,12 @@ class Requester(val signatureMethod: String, val consumerSecret: String, val con
    * @param getParams Map[String, String]() - Map of querystring parameter names and values
    */
   def get(url: String, getParams: Map[String, String]): Array[Byte] = {
+    //Return a byte array because this could be anything.
+    //It's likely a string, but it's really easy to convert byte arrays to strings
+    EntityUtils.toByteArray(getResponse(url, getParams).getEntity())
+  }
+
+  def getResponse(url: String, getParams: Map[String, String]):HttpResponse = {
     val epoch = System.currentTimeMillis()/1000;
     val nonce = OAuth.generateNonce(consumerKey + epoch)
     
@@ -103,9 +107,9 @@ class Requester(val signatureMethod: String, val consumerSecret: String, val con
         
     //Map() converted to list of String with map() and then joined with & using reduceLeft
     //StringBuilder and foreach may be more appropriate
-    val queryString = getParams.map(p =>
-      java.net.URLEncoder.encode(p._1) + "=" + java.net.URLEncoder.encode(p._2))
-      .reduceLeft{(joined,p) => joined + "&" + p}
+    val queryString = getParams.map {
+        case (k,v) => encode(k) + "=" + encode(v)
+      }.mkString("&")
     
     val signer = MessageSigner.signatureFactory(this.signatureMethod)
     val signature = signer.createSignature(this.consumerSecret, this.oauthTokenSecret, OAuth.GET, url, parameters)
@@ -113,21 +117,17 @@ class Requester(val signatureMethod: String, val consumerSecret: String, val con
     val request = new HttpGet(url + "?" + queryString)
     val realm = request.getURI().getScheme() + "://" + request.getURI().getHost() + "/"
     val authHeader = "OAuth realm=\"" + realm + "\"," +
-    	"oauth_consumer_key=\"" + URLEncoder.encode(this.consumerKey) + "\"," +
+    	"oauth_consumer_key=\"" + encode(this.consumerKey) + "\"," +
     	"oauth_nonce=\"" + nonce + "\"," + 
     	"oauth_signature_method=\"" + this.signatureMethod + "\"," +
-    	"oauth_token=\"" + URLEncoder.encode(this.oauthToken) + "\"," +
+    	"oauth_token=\"" + encode(this.oauthToken) + "\"," +
     	"oauth_timestamp=\"" + epoch + "\"," +
-        "oauth_signature=\"" + URLEncoder.encode(signature) + "\"," +
+        "oauth_signature=\"" + encode(signature) + "\"," +
         "oauth_version=\"" + this.version + "\""
         
     request.addHeader("Authorization", authHeader)
 
-    val response = client.execute(request)
-    //Return a byte array because this could be anything.
-    //It's likely a string, but it's really easy to convert byte arrays to strings
-    val responseBody = EntityUtils.toByteArray(response.getEntity())
-    return responseBody
+    client.execute(request)
   }
   
   /**
@@ -136,10 +136,7 @@ class Requester(val signatureMethod: String, val consumerSecret: String, val con
    * @param toEncode Map[String, String]()
    * @return Map[String, String]()
    */
-  def encodeMapValues(toEncode: Map[String, String]): Map[String, String] = {
-    val encoded = toEncode.foldLeft(Map[String, String]()) {(encoding, current) => encoding + (current._1 -> URLEncoder.encode(current._2))}
-    
-    return encoded
-  }
+  def encodeMapValues(params: Map[String, String]): Map[String, String] =
+    params map { case (k,v) => (encode(k) -> encode(v)) }
   
 }

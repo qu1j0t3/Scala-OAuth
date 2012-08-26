@@ -37,6 +37,8 @@ object OAuth {
 
 class OAuth(val requestMethod: String, val consumerSecret: String, val consumerKey: String,
     val signatureMethod: String, val version: String = OAuth.VERSION_1) {
+
+  def urlDecode(s:String) = URLDecoder.decode(s, "UTF-8")
   
   val client = new DefaultHttpClient()
   /**
@@ -80,7 +82,7 @@ class OAuth(val requestMethod: String, val consumerSecret: String, val consumerK
       //Different OAuth providers return different values and not necessarily in the same order
       //so convert that returned string to a map of key -> value pairs
     	val values = responseBody.split(('&')).foldLeft(Map[String,String]())
-    			{(m,current) => m + (URLDecoder.decode(current.split('=')(0)) -> URLDecoder.decode(current.split('=')(1))) }
+    			{(m,current) => m + (urlDecode(current.split('=')(0)) -> urlDecode(current.split('=')(1))) }
     	return values
     } else {
       //TODO: Better exception
@@ -128,7 +130,7 @@ class OAuth(val requestMethod: String, val consumerSecret: String, val consumerK
       //Different OAuth providers return different values and not necessarily in the same order
       //so convert that returned string to a map of key -> value pairs
     	val values = responseBody.split(('&')).foldLeft(Map[String,String]())
-    			{(m,current) => m + (URLDecoder.decode(current.split('=')(0)) -> URLDecoder.decode(current.split('=')(1)))}
+    			{(m,current) => m + (urlDecode(current.split('=')(0)) -> urlDecode(current.split('=')(1)))}
     	return values
     } else {
       //TODO: Better exception
@@ -142,8 +144,8 @@ class OAuth(val requestMethod: String, val consumerSecret: String, val consumerK
    */
   def requestFactory(url: String): HttpRequestBase = {
     this.requestMethod match {
-      case x if x == OAuth.GET => return new HttpGet(url)
-      case x if x == OAuth.POST => return new HttpPost(url)
+      case OAuth.GET  => return new HttpGet(url)
+      case OAuth.POST => return new HttpPost(url)
     }
   }
 }
