@@ -13,7 +13,7 @@ import org.apache.http.HttpStatus
 
 import jm.oauth.messagesigner._
 import jm.oauth.MessageSigner
-import jm.oauth.URLEncoder
+import net.oauth.OAuth.{percentEncode => encode}
 
 
 object OAuth {
@@ -25,14 +25,10 @@ object OAuth {
   val VERSION_1 = "1.0"
     
   // takes a byte array and returns an md5hex string
-  def generateNonce(toHash: Array[Byte]): String = {
-    return DigestUtils.md5Hex(toHash)
-  }
+  def generateNonce(toHash: Array[Byte]): String = DigestUtils.md5Hex(toHash)
   
   // takes a string and returns an md5hex string
-  def generateNonce(toHash: String): String = {
-    return generateNonce(toHash.getBytes())
-  }
+  def generateNonce(toHash: String): String = generateNonce(toHash.getBytes())
 }
 
 class OAuth(val requestMethod: String, val consumerSecret: String, val consumerKey: String,
@@ -70,7 +66,7 @@ class OAuth(val requestMethod: String, val consumerSecret: String, val consumerK
     	"oauth_signature_method=\"" + this.signatureMethod + "\"," +
     	"oauth_timestamp=\"" + epoch + "\"," +
         "oauth_consumer_key=\"" + consumerKey + "\"," +
-        "oauth_signature=\"" + URLEncoder.encode(signature) + "\"," +
+        "oauth_signature=\"" + encode(signature) + "\"," +
         "oauth_version=\"" + this.version + "\""
         
     tokenRequest.setHeader("Authorization", authHeader)
@@ -81,9 +77,8 @@ class OAuth(val requestMethod: String, val consumerSecret: String, val consumerK
     if(response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
       //Different OAuth providers return different values and not necessarily in the same order
       //so convert that returned string to a map of key -> value pairs
-    	val values = responseBody.split(('&')).foldLeft(Map[String,String]())
+    	responseBody.split('&').foldLeft(Map[String,String]())
     			{(m,current) => m + (urlDecode(current.split('=')(0)) -> urlDecode(current.split('=')(1))) }
-    	return values
     } else {
       //TODO: Better exception
       throw new Exception(responseBody)
@@ -112,13 +107,13 @@ class OAuth(val requestMethod: String, val consumerSecret: String, val consumerK
     val tokenRequest = requestFactory(url)
     
     val authHeader = "OAuth realm=\"\"," +
-    	"oauth_consumer_key=\"" + URLEncoder.encode(consumerKey) + "\"," +
+    	"oauth_consumer_key=\"" + encode(consumerKey) + "\"," +
     	"oauth_nonce=\"" + nonce + "\"," + 
     	"oauth_signature_method=\"" + this.signatureMethod + "\"," +
-    	"oauth_token=\"" + URLEncoder.encode(oauthToken) + "\"," +
+    	"oauth_token=\"" + encode(oauthToken) + "\"," +
     	"oauth_timestamp=\"" + epoch + "\"," +
-    	"oauth_verifier=\"" + URLEncoder.encode(oauthVerifier) + "\"," +
-        "oauth_signature=\"" + URLEncoder.encode(signature) + "\"," +
+    	"oauth_verifier=\"" + encode(oauthVerifier) + "\"," +
+        "oauth_signature=\"" + encode(signature) + "\"," +
         "oauth_version=\"" + this.version + "\""
         
     tokenRequest.setHeader("Authorization", authHeader)
@@ -129,9 +124,8 @@ class OAuth(val requestMethod: String, val consumerSecret: String, val consumerK
     if(response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
       //Different OAuth providers return different values and not necessarily in the same order
       //so convert that returned string to a map of key -> value pairs
-    	val values = responseBody.split(('&')).foldLeft(Map[String,String]())
+    	responseBody.split(('&')).foldLeft(Map[String,String]())
     			{(m,current) => m + (urlDecode(current.split('=')(0)) -> urlDecode(current.split('=')(1)))}
-    	return values
     } else {
       //TODO: Better exception
       throw new Exception(responseBody)

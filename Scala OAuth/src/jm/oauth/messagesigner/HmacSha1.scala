@@ -1,8 +1,7 @@
 package jm.oauth.messagesigner
 
 import jm.oauth.MessageSigner
-//import java.net.URLEncoder
-import jm.oauth.URLEncoder
+import net.oauth.OAuth.{percentEncode => encode}
 import org.apache.commons.codec.digest.DigestUtils //nicer implementation to work with than java.security.MessageDigest
 import org.apache.commons.codec.binary.Hex
 import org.apache.commons.codec.binary.Base64
@@ -23,33 +22,26 @@ class HmacSha1 extends MessageSigner{
    * 
    * @return base64 encoded String
    */
-  override def createSignature(key: String, token: String, method: String, url: String, requestParams: Map[String, String]): String = {
-    //First create a SortedMap which is sorted on the key from our Map
-	//and then feeds that into map() to combine key and value, then into reduce to join each k,v pair with an &
-	val sorted = SortedMap(requestParams.toList:_*)
-	//Would it be better to just use a stringbuilder and sorted.foreach here?
-	//This is more functional, but also requires two loops (map and reduceLeft) rather than just one
-	val sigString = method.toUpperCase() + "&" + URLEncoder.encode(url) + "&" + 
-			URLEncoder.encode(sorted.map(p => p._1 + "=" + p._2).reduceLeft{(joined,p) => joined + "&" + p})
+  override def createSignature(key: String, token: String, method: String,
+                               url: String, requestParams: Map[String, String]): String = {
+    val sigString = method.toUpperCase +
+                    "&" + encode(url) +
+                    "&" + encode(requestParams.toList.sortWith( _._1 < _._1 ).map{
+                                   case (k,v) => k + "=" + v
+                                 }.mkString("&"))
   
-	return new String(Base64.encodeBase64(generateSHA1Hash(sigString, key, token).getBytes()))
+    new String(Base64.encodeBase64(generateSHA1Hash(sigString, key, token).getBytes))
   }
   
   /**
    * Generates a SHA1 hash from the token and key
    */
   def generateSHA1Hash(value: String, key: String, token: String): String = {
-    //When token is null it gets cast to the string "null" if it is just concatenated it in here
-	val keyString = URLEncoder.encode(key) + "&" + (token match {
-	  case x if x != null => token
-	  case x => ""
-	})
-	
-	val keyBytes = keyString.getBytes();           
-	val signingKey = new SecretKeySpec(keyBytes, "HmacSHA1")
-	val mac = Mac.getInstance("HmacSHA1");
-	mac.init(signingKey);
-	val rawHmac = mac.doFinal(value.getBytes());
-	return new String(rawHmac)
+    val keyString = encode(key) + "&" + (if(token != null) token else "")
+    val keyBytes = keyString.getBytes
+    val signingKey = new SecretKeySpec(keyBytes, "HmacSHA1")
+    val mac = Mac.getInstance("HmacSHA1")
+    mac.init(signingKey)
+    new String(mac.doFinal(value.getBytes))
   }
 }

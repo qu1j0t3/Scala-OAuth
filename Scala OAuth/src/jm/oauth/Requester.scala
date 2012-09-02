@@ -11,7 +11,7 @@ import org.apache.http.util.EntityUtils
 
 import jm.oauth.MessageSigner
 import jm.oauth.messagesigner._
-import jm.oauth.URLEncoder.encode
+import net.oauth.OAuth.{percentEncode => encode}
 
 /**
  * Class for making signed requests after an access token has been received
@@ -49,11 +49,13 @@ class Requester(val signatureMethod: String, val consumerSecret: String, val con
     val nonce = OAuth.generateNonce(consumerKey + epoch)
     
     //POST params need URL encoded values once before being used in the signature where they will be encoded again
-    val parameters = Map("oauth_consumer_key" -> this.consumerKey, "oauth_signature_method" -> this.signatureMethod,
-        "oauth_timestamp" -> epoch.toString(), "oauth_version" -> this.version, "oauth_token" -> this.oauthToken,
-        "oauth_nonce" -> nonce) ++ encodeMapValues(postParams)
-        
-    val signer = MessageSigner.signatureFactory(this.signatureMethod)
+    val parameters = Map("oauth_consumer_key" -> this.consumerKey,
+                         "oauth_signature_method" -> this.signatureMethod,
+                         "oauth_timestamp" -> epoch.toString(),
+                         "oauth_version" -> this.version,
+                         "oauth_token" -> this.oauthToken,
+                         "oauth_nonce" -> nonce) ++ encodeMapValues(postParams)
+
     val signature = signer.createSignature(this.consumerSecret, this.oauthTokenSecret, OAuth.POST, url, parameters)
     
     val request = new HttpPost(url)
@@ -96,34 +98,43 @@ class Requester(val signatureMethod: String, val consumerSecret: String, val con
     EntityUtils.toByteArray(getResponse(url, getParams).getEntity())
   }
 
+  /**
+   * Perform OAuth signed GET.
+   *
+   * @param url String - The URL to GET without querystring parameters
+   * @param getParams Map[String, String]() - Map of querystring parameter names and values
+   * @return HttpResponse
+   */
   def getResponse(url: String, getParams: Map[String, String]):HttpResponse = {
-    val epoch = System.currentTimeMillis()/1000;
+    val epoch = System.currentTimeMillis()/1000
     val nonce = OAuth.generateNonce(consumerKey + epoch)
     
     //query params need URL encoded values once before being used in the signature where they will be encoded again
-    val parameters = Map("oauth_consumer_key" -> this.consumerKey, "oauth_signature_method" -> this.signatureMethod,
-        "oauth_timestamp" -> epoch.toString(), "oauth_version" -> this.version, "oauth_token" -> this.oauthToken,
-        "oauth_nonce" -> nonce) ++ encodeMapValues(getParams)
-        
-    //Map() converted to list of String with map() and then joined with & using reduceLeft
-    //StringBuilder and foreach may be more appropriate
+    val parameters = Map("oauth_consumer_key" -> this.consumerKey,
+                         "oauth_signature_method" -> this.signatureMethod,
+                         "oauth_timestamp" -> epoch.toString(),
+                         "oauth_version" -> this.version,
+                         "oauth_token" -> this.oauthToken,
+                         "oauth_nonce" -> nonce) ++
+                     encodeMapValues(getParams)
+
     val queryString = getParams.map {
         case (k,v) => encode(k) + "=" + encode(v)
       }.mkString("&")
-    
-    val signer = MessageSigner.signatureFactory(this.signatureMethod)
+
     val signature = signer.createSignature(this.consumerSecret, this.oauthTokenSecret, OAuth.GET, url, parameters)
     
     val request = new HttpGet(url + "?" + queryString)
     val realm = request.getURI().getScheme() + "://" + request.getURI().getHost() + "/"
-    val authHeader = "OAuth realm=\"" + realm + "\"," +
-    	"oauth_consumer_key=\"" + encode(this.consumerKey) + "\"," +
-    	"oauth_nonce=\"" + nonce + "\"," + 
-    	"oauth_signature_method=\"" + this.signatureMethod + "\"," +
-    	"oauth_token=\"" + encode(this.oauthToken) + "\"," +
-    	"oauth_timestamp=\"" + epoch + "\"," +
-        "oauth_signature=\"" + encode(signature) + "\"," +
-        "oauth_version=\"" + this.version + "\""
+    val authHeader =
+      "OAuth realm=\"" + realm + "\"," +
+    	      "oauth_consumer_key=\"" + encode(this.consumerKey) + "\"," +
+    	      "oauth_nonce=\"" + nonce + "\"," +
+    	      "oauth_signature_method=\"" + this.signatureMethod + "\"," +
+    	      "oauth_token=\"" + encode(this.oauthToken) + "\"," +
+    	      "oauth_timestamp=\"" + epoch + "\"," +
+            "oauth_signature=\"" + encode(signature) + "\"," +
+            "oauth_version=\"" + this.version + "\""
         
     request.addHeader("Authorization", authHeader)
 

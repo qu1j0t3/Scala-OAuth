@@ -8,7 +8,6 @@ trait MessageSigner {
     //Should throw an exception as if we hit this, then it's not really implemented.
     return null
   }
-
 }
 
 object MessageSigner {
@@ -17,8 +16,8 @@ object MessageSigner {
    */
   def signatureFactory(signature: String): MessageSigner = {
     signature match {
-      case x if x == OAuth.HMAC_SHA1 => return new HmacSha1()
-      case x if x == OAuth.PLAINTEXT => return new Plaintext()
+      case OAuth.HMAC_SHA1 => new HmacSha1
+      case OAuth.PLAINTEXT => new Plaintext
     }
   }
 }
