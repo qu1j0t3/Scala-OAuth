@@ -1,17 +1,13 @@
 package jm.oauth
 
-import jm.oauth.OAuth
 import jm.oauth.messagesigner._
 
 trait MessageSigner {
-  def createSignature(key: String, token: String, method: String, url: String, requestParams: Map[String, String]): String = {
-    //Should throw an exception as if we hit this, then it's not really implemented.
-    return null
-  }
+  def createSignature(key: String, token: String, method: String, url: String, requestParams: Map[String, String]): String
 }
 
 object MessageSigner {
-   /**
+  /**
    * Simple factory for MessageSigner objects based on this.signatureMethod value
    */
   def signatureFactory(signature: String): MessageSigner = {

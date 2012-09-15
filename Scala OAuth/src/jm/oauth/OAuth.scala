@@ -11,8 +11,6 @@ import org.apache.http.HttpResponse
 import org.apache.http.util.EntityUtils
 import org.apache.http.HttpStatus
 
-import jm.oauth.messagesigner._
-import jm.oauth.MessageSigner
 import net.oauth.OAuth.{percentEncode => encode}
 
 
