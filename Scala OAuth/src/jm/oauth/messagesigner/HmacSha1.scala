@@ -29,19 +29,18 @@ class HmacSha1 extends MessageSigner{
                     "&" + encode(requestParams.toList.sortWith( _._1 < _._1 ).map{
                                    case (k,v) => k + "=" + v
                                  }.mkString("&"))
-  
-    new String(Base64.encodeBase64(generateSHA1Hash(sigString, key, token).getBytes))
+    new String(Base64.encodeBase64(generateSHA1Hash(sigString, key, token)))
   }
   
   /**
    * Generates a SHA1 hash from the token and key
    */
-  def generateSHA1Hash(value: String, key: String, token: String): String = {
+  def generateSHA1Hash(value: String, key: String, token: String): Array[Byte] = {
     val keyString = encode(key) + "&" + (if(token != null) token else "")
-    val keyBytes = keyString.getBytes
+    val keyBytes = keyString.getBytes("US-ASCII")
     val signingKey = new SecretKeySpec(keyBytes, "HmacSHA1")
     val mac = Mac.getInstance("HmacSHA1")
     mac.init(signingKey)
-    new String(mac.doFinal(value.getBytes))
+    mac.doFinal(value.getBytes("US-ASCII"))
   }
 }
