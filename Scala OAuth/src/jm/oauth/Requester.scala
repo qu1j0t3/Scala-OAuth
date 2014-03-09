@@ -8,6 +8,7 @@ import org.apache.http.client.methods.HttpGet
 import org.apache.http.HttpResponse
 import org.apache.http.HttpStatus
 import org.apache.http.util.EntityUtils
+import org.apache.http.impl.client.HttpClients
 
 import net.oauth.OAuth.{percentEncode => encode}
 
@@ -29,7 +30,7 @@ class Requester(val signatureMethod: String, val consumerSecret: String, val con
   //but I am trying to keep the user's work minimal at the moment
   
   val signer = MessageSigner.signatureFactory(this.signatureMethod)
-  val client = new DefaultHttpClient()
+  val client = HttpClients.createDefault
   
   // What about plain old postdata with no name?
   // I think that is not specified as part of the OAuth spec
@@ -60,13 +61,13 @@ class Requester(val signatureMethod: String, val consumerSecret: String, val con
     //what if user needs to specify the realm?
     val realm = request.getURI().getScheme() + "://" + request.getURI().getHost() + "/"
     val authHeader = "OAuth realm=\"" + realm + "\"," +
-    	"oauth_consumer_key=\"" + encode(this.consumerKey) + "\"," +
-    	"oauth_nonce=\"" + nonce + "\"," + 
-    	"oauth_signature_method=\"" + this.signatureMethod + "\"," +
-    	"oauth_token=\"" + encode(this.oauthToken) + "\"," +
-    	"oauth_timestamp=\"" + epoch + "\"," +
-        "oauth_signature=\"" + encode(signature) + "\"," +
-        "oauth_version=\"" + this.version + "\""
+                     "oauth_consumer_key=\"" + encode(this.consumerKey) + "\"," +
+                     "oauth_nonce=\"" + nonce + "\"," +
+                     "oauth_signature_method=\"" + this.signatureMethod + "\"," +
+                     "oauth_token=\"" + encode(this.oauthToken) + "\"," +
+                     "oauth_timestamp=\"" + epoch + "\"," +
+                     "oauth_signature=\"" + encode(signature) + "\"," +
+                     "oauth_version=\"" + this.version + "\""
         
     request.addHeader("Authorization", authHeader)
 
@@ -124,15 +125,14 @@ class Requester(val signatureMethod: String, val consumerSecret: String, val con
     
     val request = new HttpGet(url + "?" + queryString)
     val realm = request.getURI().getScheme() + "://" + request.getURI().getHost() + "/"
-    val authHeader =
-      "OAuth realm=\"" + realm + "\"," +
-    	      "oauth_consumer_key=\"" + encode(this.consumerKey) + "\"," +
-    	      "oauth_nonce=\"" + nonce + "\"," +
-    	      "oauth_signature_method=\"" + this.signatureMethod + "\"," +
-    	      "oauth_token=\"" + encode(this.oauthToken) + "\"," +
-    	      "oauth_timestamp=\"" + epoch + "\"," +
-            "oauth_signature=\"" + encode(signature) + "\"," +
-            "oauth_version=\"" + this.version + "\""
+    val authHeader = "OAuth realm=\"" + realm + "\"," +
+                     "oauth_consumer_key=\"" + encode(this.consumerKey) + "\"," +
+                     "oauth_nonce=\"" + nonce + "\"," +
+                     "oauth_signature_method=\"" + this.signatureMethod + "\"," +
+                     "oauth_token=\"" + encode(this.oauthToken) + "\"," +
+                     "oauth_timestamp=\"" + epoch + "\"," +
+                     "oauth_signature=\"" + encode(signature) + "\"," +
+                     "oauth_version=\"" + this.version + "\""
         
     request.addHeader("Authorization", authHeader)
 
