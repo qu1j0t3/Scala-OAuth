@@ -9,6 +9,7 @@ import org.apache.http.HttpResponse
 import org.apache.http.HttpStatus
 import org.apache.http.util.EntityUtils
 import org.apache.http.impl.client.HttpClients
+import org.apache.http.client.config.RequestConfig
 
 import net.oauth.OAuth.{percentEncode => encode}
 
@@ -91,10 +92,10 @@ class Requester(val signatureMethod: String, val consumerSecret: String, val con
    * @param url String - The URL to GET without querystring parameters
    * @param getParams Map[String, String]() - Map of querystring parameter names and values
    */
-  def get(url: String, getParams: Map[String, String]): Array[Byte] = {
+  def get(url: String, getParams: Map[String, String], config:Option[RequestConfig]): Array[Byte] = {
     //Return a byte array because this could be anything.
     //It's likely a string, but it's really easy to convert byte arrays to strings
-    EntityUtils.toByteArray(getResponse(url, getParams).getEntity())
+    EntityUtils.toByteArray(getResponse(url, getParams, config).getEntity())
   }
 
   /**
@@ -104,7 +105,7 @@ class Requester(val signatureMethod: String, val consumerSecret: String, val con
    * @param getParams Map[String, String]() - Map of querystring parameter names and values
    * @return HttpResponse
    */
-  def getResponse(url: String, getParams: Map[String, String]):HttpResponse = {
+  def getResponse(url: String, getParams: Map[String, String], config:Option[RequestConfig]):HttpResponse = {
     val epoch = System.currentTimeMillis()/1000
     val nonce = OAuth.generateNonce(consumerKey + epoch)
     
@@ -135,6 +136,8 @@ class Requester(val signatureMethod: String, val consumerSecret: String, val con
                      "oauth_version=\"" + this.version + "\""
         
     request.addHeader("Authorization", authHeader)
+
+    config.foreach(request.setConfig(_))
 
     client.execute(request)
   }
